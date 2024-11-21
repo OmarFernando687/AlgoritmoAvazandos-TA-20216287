@@ -1,0 +1,215 @@
+/* 
+ * File:   main.cpp
+ * Author: Omar Jimenez
+ *
+ * Created on 18 de noviembre de 2024, 01:03 PM
+ */
+
+#include <iostream>
+#include <ctime>
+#include <vector>
+#include <cmath>
+#include <algorithm>
+#include <climits>
+#define MAX 100000
+#define ALFA 0.2
+
+
+using namespace std;
+struct Cliente{
+    int id;
+    int demanda;
+    int posx;
+    int posy;
+    bool Entregado=false;
+};
+struct Satelite{
+    int id;
+    int capacidad;
+    int capacidadMax;
+    int posx;
+    int posy;
+    vector<int> clientes;
+    int distanciaRecorrida=0;
+    
+};
+struct ClienteAsignado{
+    int idCliente;
+    int distancia;
+};
+/*
+ * 
+ */
+
+int CalcularDistancia(Satelite satelites,vector<Cliente> vclientes,int id,int i){
+    int posx1,posx2,posy1,posy2;
+    posx1=vclientes[i].posx;
+    posy1=vclientes[i].posy;
+    if(id==0){
+        posx2=satelites.posx;
+        posy2=satelites.posy;
+    }
+    else{
+        posx2=vclientes[id-1].posx;
+        posy2=vclientes[id-1].posy;
+    }
+    
+    return sqrt(pow(posx1-posx2,2) + pow(posy1-posy2,2));
+}
+int compara(ClienteAsignado a,ClienteAsignado b){
+    return a.distancia<b.distancia;
+}
+int verifica(vector<ClienteAsignado> asignados,int rcl){
+    int count=0;
+    for(int i=0;i<asignados.size();i++){
+        if(asignados[i].distancia<=rcl)count++;
+    }
+    return count;
+}
+int TotalRecorrido(vector<Satelite> satelites){
+    int recorrido=0;
+    for(int i=0;i<satelites.size();i++){
+        recorrido+=satelites[i].distanciaRecorrida;
+    }
+    return recorrido;
+    
+}
+void faseConstruccion(vector<Cliente> &vclientes,vector<Satelite> &satelites){
+    
+    int tau,beta;
+    int rcl,indrcl,indcliente;
+    
+   
+    
+    
+    for(int i=0;i<satelites.size();i++){
+        
+   
+        int id=0; 
+        while(true){
+       
+            vector<ClienteAsignado> asignados;    
+            
+            for(int j=0;j<vclientes.size();j++){
+                
+                if(!vclientes[j].Entregado and vclientes[j].demanda + satelites[i].capacidad <=satelites[i].capacidadMax){
+                    int distancia = CalcularDistancia(satelites[i],vclientes,id,j);
+                    ClienteAsignado aux;
+                    aux.distancia=distancia;
+                    aux.idCliente=vclientes[j].id;
+                    asignados.push_back(aux);
+                    
+                            
+                }
+            }
+            if(asignados.empty())break;
+            sort(asignados.begin(),asignados.end(),compara);
+            beta=asignados[0].distancia;
+            tau=asignados[asignados.size()-1].distancia;
+            rcl= round(beta + ALFA*(tau-beta));
+            indrcl=verifica(asignados,rcl);
+            
+            indcliente= rand()%indrcl;
+            
+            satelites[i].clientes.push_back(asignados[indcliente].idCliente);
+            
+            satelites[i].distanciaRecorrida+=asignados[indcliente].distancia;
+            id=asignados[indcliente].idCliente;
+            vclientes[id-1].Entregado=true;
+            satelites[i].capacidad+=vclientes[id-1].demanda;
+            
+        }
+        int idaux=id-1;
+        id=0;
+        satelites[i].distanciaRecorrida+=CalcularDistancia(satelites[i],vclientes,id,idaux);
+        //Al finalizar, se calcula la distancia de vuelta
+
+        
+        
+    }
+
+
+    
+    
+    
+    
+    
+}
+bool ClientesCubiertos(vector<Cliente> clientes){
+    for(int i=0;i<clientes.size();i++){
+        if(clientes[i].Entregado==false)return false;
+    }
+    return true;
+}
+
+void asignacionClientesASatelites(vector<Cliente> clientes,vector<Satelite> satelites){
+
+     srand(time(0));    
+    vector<Satelite> solucion;
+    int minimo = INT_MAX;
+    for(int k=0;k<MAX;k++){
+     vector<Satelite> vsatelites;
+     vsatelites.insert(vsatelites.begin(),satelites.begin(),satelites.end());
+     vector<Cliente> vclientes;        
+         
+     vclientes.insert(vclientes.begin(),clientes.begin(),clientes.end());
+
+        srand(time(0));
+        
+         faseConstruccion(vclientes,vsatelites);
+    
+        int distanciaTotal= TotalRecorrido(vsatelites);
+        if(distanciaTotal<minimo and ClientesCubiertos(vclientes)){
+            minimo=distanciaTotal;
+            
+            solucion.erase(solucion.begin(),solucion.begin()+solucion.size());
+            solucion.insert(solucion.begin(),vsatelites.begin(),vsatelites.end());
+        }
+
+        
+        
+        
+    }
+                for(int i=0;i<solucion.size();i++){
+            cout<<"Satelite: "<<solucion[i].id<<endl;
+            cout<<"Capacidad: "<<solucion[i].capacidad<<" / "<<solucion[i].capacidadMax<<endl;
+            cout<<"Distancia : "<<solucion[i].distanciaRecorrida<<endl;
+            cout<<"Cliente encargados: ";
+            for(int j=0;j<solucion[i].clientes.size();j++){
+                cout<<solucion[i].clientes[j]<<" ";
+            }
+            cout<<endl;
+        }
+    cout<<"Distancia total recorrida: "<<minimo;
+//    
+}
+
+
+int main(int argc, char** argv) {
+
+    vector<Cliente> clientes = {
+        {1, 40, 3, 3}, {2, 20, 1, 2}, {3, 15, 5, 6}, {4, 25, 7, 10}, {5, 10, 3, 5},
+        {6, 40, 10, 3}, {7, 20, 0, 3}, {8, 15, 3, 11}, {9, 25, 8, 10}, {10, 10, 7, 9},
+
+    };
+//        vector<Cliente> clientes = {
+//        {1, 10, 2, 3}, {2, 20, 5, 5}, {3, 15, 7, 8}, {4, 25, 10, 10}, {5, 10, 3, 2},
+//        {6, 30, 8, 12}, {7, 10, 11, 5}, {8, 15, 6, 6}, {9, 20, 4, 4}, {10, 10, 13, 13},
+//        {11, 15, 1, 1}, {12, 25, 9, 9}, {13, 20, 12, 6}, {14, 20, 14, 14}, {15, 10, 0, 0},
+//        {16, 15, 1, 10}, {17, 25, 9, 15}, {18, 20, 12, 10}, {19, 20, 11, 14}, {20, 10, 7, 9}
+//    };
+    // Definir 4 satélites con coordenadas y capacidades
+//    vector<Satelite> satelites = {
+//        {1,0, 80, 0, 0}, {2,0, 80, 10, 10}, {3,0, 50, 5, 5}, {4, 0,70, 12, 6}
+//        ,{5,0, 70, 15, 15}
+//    };
+     vector<Satelite> satelites = {
+         {1,0, 70, 2, 3}, {2,0, 90, 7, 6}, {3,0, 80, 11, 12}
+     };
+    asignacionClientesASatelites(clientes,satelites);
+
+
+
+    return 0;
+}
+
